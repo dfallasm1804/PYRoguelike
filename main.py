@@ -1,6 +1,8 @@
 import tcod
 
-from actions import EscapeAction, MovementAction
+from engine import Engine
+from entity import Entity
+from game_map import GameMap
 from input_handlers import EventHandler
 
 def main() -> None:
@@ -9,10 +11,9 @@ def main() -> None:
   screen_width = 80
   screen_height = 50
 
-  # keep track of player coords
-  # py3 doesn't truncate, int casts float to int to stop error from tcod
-  player_x = int (screen_width / 2)
-  player_y = int (screen_height / 2)
+  #define map size
+  map_width = 80
+  map_height = 45
 
   #define tileset
   tileset = tcod.tileset.load_tilesheet(
@@ -21,6 +22,13 @@ def main() -> None:
 
   event_handler = EventHandler()
 
+  player = Entity(int(screen_width / 2), int(screen_height / 2), "@", (255, 255, 255))
+  npc = Entity(int(screen_width / 2 - 5), int(screen_height / 2), "!", (255, 255, 0))
+  entities = {npc, player}
+
+  game_map = GameMap(map_width, map_height)
+
+  engine = Engine(entities=entities, event_handler=event_handler, game_map=game_map, player=player)
   # create screen with prev def'd values and vsync
   with tcod.context.new_terminal(
     screen_width,
@@ -35,30 +43,13 @@ def main() -> None:
       #Game loop
       while True: 
 
-        # put "@" symbol at 1, 1 coords
-        root_console.print(x=player_x, y=player_y, string="@")
+        # put "@" symbol at coords
+        engine.render(console=root_console, context=context)
 
         #updates screen with code has deemed to display, if this isn't here, nothing will print to screen
-        context.present(root_console)
+        events = tcod.event.wait()
 
-        #clears console every iteration
-        root_console.clear()
-
-        # handles key presses
-        for event in tcod.event.wait():
-          action = event_handler.dispatch(event)
-
-          if action is None:
-            continue
-
-          #is action is an instance of class MovementAction, and the action can move, update coords to renderer
-          if isinstance(action, MovementAction):
-            player_x += action.dx
-            player_y += action.dy
-
-          # is in instance and action is Escape press, close
-          elif isinstance(action, EscapeAction):
-            raise SystemExit()
+        engine.handle_events(events)
 
 
 if __name__ == "__main__":
